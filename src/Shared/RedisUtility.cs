@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Microsoft.Web.Redis
@@ -61,8 +62,10 @@ namespace Microsoft.Web.Redis
 
             BinaryFormatter binaryFormatter = new BinaryFormatter();
             using (MemoryStream memoryStream = new MemoryStream())
+            using (DeflateStream deflateStream = new DeflateStream(memoryStream, CompressionMode.Compress))
             {
-                binaryFormatter.Serialize(memoryStream, data);
+                binaryFormatter.Serialize(deflateStream, data);
+                deflateStream.Close();
                 byte[] objectDataAsStream = memoryStream.ToArray();
                 return objectDataAsStream;
             }
@@ -77,9 +80,10 @@ namespace Microsoft.Web.Redis
 
             BinaryFormatter binaryFormatter = new BinaryFormatter();
             using (MemoryStream memoryStream = new MemoryStream(dataAsBytes, 0, dataAsBytes.Length))
+            using (DeflateStream deflateStream =new DeflateStream(memoryStream, CompressionMode.Decompress))
             {
                 memoryStream.Seek(0, System.IO.SeekOrigin.Begin);
-                object retObject = (object)binaryFormatter.Deserialize(memoryStream);
+                object retObject = (object)binaryFormatter.Deserialize(deflateStream);
 
                 if (retObject.GetType() == typeof(RedisNull))
                 {
